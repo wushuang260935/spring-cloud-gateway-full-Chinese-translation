@@ -38,4 +38,84 @@ spring cloud gateway的目标是提供一个简单的,高效的方式。这个�
 
 ## 路由判断工厂
 
-网关把URI路由成spring webflux的handlermapping的一部分。网关包含了很多内嵌的路由判断工厂（也就是说这些工厂是内部类).不同的工厂会去处理不同的http属性。多个路由判断工厂可以通过逻辑"and"联合
+网关把URI路由成spring webflux的handlermapping的一部分。网关包含了很多内嵌的路由判断工厂（也就是说这些工厂是内部类).不同的工厂会去处理不同的http属性。多个路由判断工厂可以通过逻辑"and"组合到一起使用，下面开始介绍具体的路由判断工厂
+
+### 后置路由判断工厂
+
+后置路由判断工厂只需要一个日期时间类型的参数。这个工厂生成的“判断”可以匹配那些发生在日期时间参数之后的请求。如下方在application.yml中配置所示:这个“判断”可以匹配任何“请求时间”晚于2017年1月20号17点42分47秒的请求。
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: after_route
+        uri: https://example.org
+        predicates:
+        - After=2017-01-20T17:42:47.789-07:00[America/Denver]
+
+
+### 区间路由判断工厂
+
+和上一个类似，区间路由判断工厂也需要两个日期时间类型参数。左边的参数必须小于右边的参数。这个工厂生成的“判断”可以匹配任何请求时间介于这两个参数之间的请求。application.yml配置如下方所示:
+
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: between_route
+        uri: https://example.org
+        predicates:
+        - Between=2017-01-20T17:42:47.789-07:00[America/Denver], 2017-01-21T17:42:47.789-07:00[America/Denver]
+        
+### 前置路由判断工厂
+
+前置路由判断工厂也只需要一个日期时间类型参数,同样的，“判断”可以匹配任何请求时间发生在参数之前的请求。application.yml如下所示:
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: before_route
+        uri: https://example.org
+        predicates:
+        - Before=2017-01-20T17:42:47.789-07:00[America/Denver]
+        
+### cookie路由判断工厂
+        
+这个工厂需要两个参数，一个是cookie名称，另一个是正则表达式.也就是说，这个工厂生成的“判断”可以匹配到含有以下cookie的请求:cookie中的name=第一个参数,cookie中的value通过第二个参数的验证。application.yml如下所示:只要请求中的cookie的name=chocolate并且cookie的value能通过正则表达式"ch.p"验证.那么这个请求就会被匹配到。
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: cookie_route
+        uri: https://example.org
+        predicates:
+        - Cookie=chocolate, ch.p
+        
+### 头部路由判断工厂
+
+和上一个路由工厂类似，头部路由判断工厂也需要两个参数.一个头部属性和一个正则表达式，也就是说，如果一个请求中header有一个属性=第一个参数,并且这个属性的值能够通过第二个参数的验证，那么这个请求就会被匹配到。application.yml如下所示:
+请求的header中包含X-Request-Id属性，并且这个属性的值能通过"\d+"的验证，那么这个请求就会被匹配到.
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: header_route
+        uri: https://example.org
+        predicates:
+        - Header=X-Request-Id, \d+
+        
+### Host(主机)路由判断工厂
+
+主机路由判断工厂需要一个参数:一连串域名，域名之间用逗号隔开,域名必须有.号和后缀,同理,如果请求中的host和参数中的仁一个域名相同，这个请求就会被匹配到,application.yml如下所示:需要注意的是,www.somehost.org.sub.somehost.org,
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: host_route
+        uri: https://example.org
+        predicates:
+        - Host=**.somehost.org,**.anotherhost.org
