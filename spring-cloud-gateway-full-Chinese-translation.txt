@@ -1,6 +1,6 @@
 ﻿# spring cloud gateway(网关)
 
-spring cloud gateway提供了一个API网关.这个网关以spring生态系统为基础.他们是:Spring5,Spring boot2和Project reactor.
+spring cloud gateway提供了一个API网关.这个网关以spring生态系统为基础.他们是:Spring5,Spring boot2和Project reactor。
 spring cloud gateway的目标是提供一个简单的,高效的方式。这个方式能够路由到我们写的服务API上 ,spring cloud gateway还能为开发
 人员提供横切关注点(cross cutting concern  有点类似与AOP的那种概念) 例如，我们可以利用spring cloud gateway做安全过滤(security)，
 监控(monitoring),统计(metrics),跳转(resiliency).
@@ -17,13 +17,16 @@ spring cloud gateway的目标是提供一个简单的,高效的方式。这个�
 
 ##相关术语解释
 
-### 路由(Route):路由是gateway的基本模块。它由一个ID，一个请求URI，一个判断集(collection of predicates),一个过滤集(collection of filters).
+路由(Route)：
+    路由是gateway的基本模块。它由一个ID，一个请求URI，一个判断集(collection of predicates),一个过滤集(collection of filters).
 如果判断集都返回true。那么这个路由就会请求成功。
 
-### 判断(predicate)：“判断”是jdk8中Predicate的一个实际运用。入参是springframework的ServerWebExchange类型.使用这个类型可以允许开发人员传递HTTP请求的任意部分.
+判断(predicate)：
+  “判断”是jdk8中Predicate接口的一个实际运用。入参是springframework的ServerWebExchange类型.使用这个类型可以允许开发人员传递HTTP请求的任意部分.
 比如:http请求的heads,http请求的parameters.
 
-### 过滤器(filter):"过滤器"是GatewayFilter接口的实例对象。“过滤器”由具体的工厂类负责实例化。
+过滤器(filter):
+  "过滤器"是GatewayFilter接口的实例对象。“过滤器”由具体的工厂类负责实例化。
 
 #工作原理
 
