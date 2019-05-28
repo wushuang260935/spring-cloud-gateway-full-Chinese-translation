@@ -109,7 +109,7 @@ spring:
         
 ### Host(主机)路由判断工厂
 
-主机路由判断工厂需要一个参数:一连串域名，域名之间用逗号隔开,域名必须有.号和后缀,同理,如果请求中的host和参数中的仁一个域名相同，这个请求就会被匹配到,application.yml如下所示:需要注意的是,www.somehost.org.sub.somehost.org,
+主机路由判断工厂需要一个参数:一连串uri，uri之间用逗号隔开,uri必须有.号和后缀,同理,如果请求中的uri和参数中的任一个域名相同，这个请求就会被匹配到,application.yml如下所示:需要注意的是:www.somehost.org.sub.somehost.org,mmi.somehost.org都匹配**.somehost.org.另外注意需要注意的是:"判断"也支持uri中存在变量路径.比如:{type}.somehost.org。还需要注意:"host路由判断"会把“变量路径”和"变量值"放到一个map中。“变量路径”作为key.“变量值”作为value。如:map.put("type","login")。并且，为了方便后面的gatewayFilter factories(网关过滤器工厂)使用这个map.它还会把这个map作为value，ServerWebExchangeUtils.URI_TEMPLATE_VARIABLES_ATTRIBUTE作为key.放到ServerWebExchange.getAttributes()中.
 
 spring:
   cloud:
@@ -118,4 +118,139 @@ spring:
       - id: host_route
         uri: https://example.org
         predicates:
-        - Host=**.somehost.org,**.anotherhost.org
+        - Host=**.somehost.org,**.anotherhost.org,{type}.somehost.org
+
+### 方式路由判断工厂
+
+方式路由判断工厂需要一个参数:http请求方式.application.yml如下所示:
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: method_route
+        uri: https://example.org
+        predicates:
+        - Method=GET
+     
+### 子路径路由判断工厂
+
+子路径路由判断工厂需要两个参数:一连串Spring Pathmathcer类型的子路径，以及一个选填参数:matchOptionalTrailingSeparator(。。。。分隔符)
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: host_route
+        uri: https://example.org
+        predicates:
+        - Path=/foo/{segment},/bar/{segment}
+        
+和Host路由工厂完全一样，如果有变量路径就会放到map里面，以上就不再赘述了。
+
+### 查询路由判断工厂
+
+查询路由判断工厂需要两个参数:一个param和一个可选的正则表达式."判断”会匹配到请求的参数名等于param并且请求参数值能通过正则表达式验证的请求。
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: query_route
+        uri: https://example.org
+        predicates:
+        - Query=foo,ba./d
+        
+### 远程地址路由判断工厂
+
+这个工厂需要一个list(长度不能小于1).list放入ipv4或者ipv6地址串,application.yml如下所示:
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: remoteaddr_route
+        uri: https://example.org
+        predicates:
+        - RemoteAddr=192.168.1.1
+        
+### 修改远程地址的解析方式
+
+默认情况下远程地址路由判断工厂使用请求中给我们的远程地址.但是如果我们的网关拿到的是代理服务器转发的请求的话.spring cloud gateway拿到的就不是客户端请求的真实IP,就会导致匹配失败。这种情况下，你可以设置一个自定义RemoteAddressResolver来修改远程地址的解析方式。spring cloud gateway自带一个解析器:XForwardedRemoteAddressResolver,这个解析器是基于 X-Forwarded-For header的.并且它有两个静态构造函数trustAll和maxTrustedIndex,第一个构造那函数生成的解析器总是从 X-Forwarded-For header中拿第一个IP地址.(通常x-forwarded-for中第一个IP地址是真实地址，自行了解http头的x-forwarded-for属性)；但是x-forwarded-for属性是可以被一些客户端修改的，所以他也有缺陷。而另一个构造函数maxTrustedIndex接受一个integer参数(它不能小于1）。这个参数代表的是受信任的ip地址数量。我们从下面的例子来说明:
+
+如果x-forwarded-for属性中有这几个ip:0.0.0.1,0.0.0.2,0.0.0.3.也就表示这个请求解析出了3个ip地址。
+
+而当maxTrustedIndex的值如下时，解析器就会解析到这几个地址:
+
+
+maxTrustedIndex的参数值                                        解析结果
+
+     0                           IllegalArgumentException 
+     
+     1                                   0.0.0.3
+     
+     2                                0.0.0.2,0.0.0.3
+     
+     3                            0.0.0.1,0.0.0.2,0.0.0.3
+     
+     4                            0.0.0.1,0.0.0.2,0.0.0.3
+     
+可以看到他是从右边向左边开始过滤的。
+
+## 网关过滤器工厂
+
+网关路由器中的路由过滤器允许通过某种方式来修改http request。和http response;路由过滤器适合处理一种特定的路由。spring cloud gateway包含了很多内嵌的(内部class)网关过滤器工厂。
+
+### 添加请求头网关过滤器工厂
+
+这个工厂需要两个参数:name和value.application.yml如下所示:这个过滤器将会添加属性名称为X-Request-Foo,属性值为Bar到请求头中.
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: add_request_header_route
+        uri: https://example.org
+        filters:
+        - AddRequestHeader=X-Request-Foo, Bar
+        
+### 添加请求参数网关过滤器工厂
+
+这个工厂需要两个参数:name和value.application.yml如下所示:这个过滤器将会添加属性名称为foo,属性值为bar到请求参数中.
+
+### 添加返回头网关过滤器工厂
+
+这个工厂需要两个参数:name和value.application.yml如下所示:这个过滤器将会添加属性名称为X-Response-Foo,属性值为Bar到返回头中.
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: add_response_header_route
+        uri: https://example.org
+        filters:
+        - AddResponseHeader=X-Response-Foo, Bar
+        
+### 消除重复响应头网关过滤器工厂
+
+这个工厂需要一个name参数。name参数可以是一连串响应头信息，响应头之间用空格隔开,这个工厂还需要一个可选的strategy参数。application.yml如下所示:有时候spring cloud gateway的CORS logic(跨域请求逻辑处理）和downstream(响应后逻辑处理）都会添加Access-Control-Allow-Credentials响应头和Access-Control-Allow-Origin响应头，这就会导致响应头属性重复。所以这个过滤器可以去掉指定的重复的部分。至于去掉的是哪一个重复的就可以看第二个参数(strategy)了。第二个参数实际只有3个值,RETAIN_FIRST(默认，表示只保留第一个),RETAIN_LAST(表示只保留最后一个),RETAIN_UNIQUE(表示只保留属性值不一样的那一个)
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: dedupe_response_header_route
+        uri: https://example.org
+        filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin,RETAIN_UNIQUE
+
+这个过滤器不只是处理上面例子中的跨域请求的重复问题。它其实可以处理所有响应头属性重复的问题。
+        
+### 断路器网关过滤器工厂
+
+“断路器”是一个实现了netflix(奈飞)的"破除闭环者"模式的库。"断路器网关过滤器"允许你引入"破除闭环者"到网关路由过程中。防止发生连环故障(主要是spring cloud 服务集群的时候某一个服务挂了，会影响其他有关联的服务，可能导致整个服务瘫痪)，还有一个功能就是:一旦downstream(响应后逻辑处理)失败，还允许你返回应急响应给客户端。
+
+要使用这个工厂，你需要从spring cloud Netflix中加入spring-cloud-starter-netflix-hystrix.这里主要是基于netflix的spring cloud，所以我就不做详细研究了。请查看英文文档了解更多。
+
+       
+        
