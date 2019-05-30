@@ -516,33 +516,35 @@ spring:
 
 >这个过滤器只能用java DSL配置
 
-`@Bean`
-`public RouteLocator routes(RouteLocatorBuilder builder) {`
-`    return builder.routes()`
-`        .route("rewrite_request_obj", r -> r.host("*.rewriterequestobj.org")`
-`            .filters(f -> f.prefixPath("/httpbin")`
-`                .modifyRequestBody(String.class, Hello.class, MediaType.APPLICATION_JSON_VALUE,`
-`                    (exchange, s) -> return Mono.just(new Hello(s.toUpperCase())))).uri(uri))`
-`        .build();`
-`}`
+```
+@Bean
+public RouteLocator routes(RouteLocatorBuilder builder) {
+    return builder.routes()
+        .route("rewrite_request_obj", r -> r.host("*.rewriterequestobj.org")
+            .filters(f -> f.prefixPath("/httpbin")
+                .modifyRequestBody(String.class, Hello.class, MediaType.APPLICATION_JSON_VALUE,
+                    (exchange, s) -> return Mono.just(new Hello(s.toUpperCase())))).uri(uri))
+        .build();
+}
 
-`static class Hello {`
-`    String message;`
+static class Hello {
+    String message;
 
-`    public Hello() { }`
+    public Hello() { }
 
-`    public Hello(String message) {`
-`        this.message = message;`
-`    }`
+    public Hello(String message) {
+        this.message = message;
+    }
 
-`    public String getMessage() {`
-`        return message;`
-`    }`
+    public String getMessage() {
+        return message;
+    }
 
-`    public void setMessage(String message) {`
-`        this.message = message;`
-`    }`
-`}`
+    public void setMessage(String message) {
+        this.message = message;
+    }
+}
+```
 
 ### 修改响应体网关过滤器工厂
 
@@ -550,15 +552,17 @@ spring:
 
 >这个过滤器只能用java DSL配置
 
-`@Bean`
-`public RouteLocator routes(RouteLocatorBuilder builder) {`
-`    return builder.routes()`
-`        .route("rewrite_response_upper", r -> r.host("*.rewriteresponseupper.org")`
-`            .filters(f -> f.prefixPath("/httpbin")`
-`        		.modifyResponseBody(String.class, String.class,`
-`        		    (exchange, s) -> Mono.just(s.toUpperCase()))).uri(uri)`
-`        .build();`
-`}`
+```
+@Bean
+public RouteLocator routes(RouteLocatorBuilder builder) {
+    return builder.routes()
+        .route("rewrite_response_upper", r -> r.host("*.rewriteresponseupper.org")
+            .filters(f -> f.prefixPath("/httpbin")
+        		.modifyResponseBody(String.class, String.class,
+        		    (exchange, s) -> Mono.just(s.toUpperCase()))).uri(uri)
+        .build();
+}
+```
 
 ### 默认过滤器
 
@@ -581,38 +585,44 @@ spring:
 
 由于spring cloud网关通过区分pre和post标签来过滤逻辑执行。pre是请求前执行，post是请求后执行。过滤器会把优先级最高的打上pre标签，优先级最低的打上Post标签。
 
-`@Bean`
-`@Order(-1)`
-`public GlobalFilter a() {`
-`    return (exchange, chain) -> {`
-`        log.info("first pre filter");`
-`        return chain.filter(exchange).then(Mono.fromRunnable(() -> {`
-`            log.info("third post filter");`
-`        }));`
-    };`
-`}`
+```
+@Bean
+@Order(-1)
+public GlobalFilter a() {
+    return (exchange, chain) -> {
+        log.info("first pre filter");
+        return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+            log.info("third post filter");
+        }));
+    };
+}
 
-`@Bean`
-`@Order(0)`
-`public GlobalFilter b() {`
-`    return (exchange, chain) -> {`
-`        log.info("second pre filter");`
-`        return chain.filter(exchange).then(Mono.fromRunnable(() -> {`
-`            log.info("second post filter");`
-`        }));`
-`    };`
-`}`
 
-`@Bean`
-`@Order(1)`
-`public GlobalFilter c() {`
-`    return (exchange, chain) -> {`
-`        log.info("third pre filter");`
-`        return chain.filter(exchange).then(Mono.fromRunnable(() -> {`
-`            log.info("first post filter");`
-`        }));`
-`    };`
-`}`
+
+@Bean
+@Order(0)
+public GlobalFilter b() {
+    return (exchange, chain) -> {
+        log.info("second pre filter");
+        return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+            log.info("second post filter");
+        }));
+    };
+}
+
+
+
+@Bean
+@Order(1)
+public GlobalFilter c() {
+    return (exchange, chain) -> {
+        log.info("third pre filter");
+        return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+            log.info("first post filter");
+        }));
+    };
+}
+```
 
 ### 转发路由过滤器
 
@@ -746,4 +756,388 @@ spring:
         filters:
         - SetStatus=401
         
-某些情况下，使用配置文件就够了，但是生产环境的某些情况下使用额外的资源配置会更好,比如数据库.RouteDefinitionLocator被用来加载Redis,MongoDB,等的属性配置                           
+某些情况下，使用配置文件就够了，但是生产环境的某些情况下使用额外的资源配置会更好,比如数据库.RouteDefinitionLocator被用来加载Redis,MongoDB,等的属性配置。
+
+### 流畅的JAVA路由API
+
+为了允许简单的配置，在bean RouteLocatorBuilder中有一个流畅的API。       
+
+```
+// static imports from GatewayFilters and RoutePredicates
+@Bean
+public RouteLocator customRouteLocator(RouteLocatorBuilder builder, ThrottleGatewayFilterFactory throttle) {
+    return builder.routes()
+            .route(r -> r.host("**.abc.org").and().path("/image/png")
+                .filters(f ->
+                        f.addResponseHeader("X-TestHeader", "foobar"))
+                .uri("http://httpbin.org:80")
+            )
+            .route(r -> r.path("/image/webp")
+                .filters(f ->
+                        f.addResponseHeader("X-AnotherHeader", "baz"))
+                .uri("http://httpbin.org:80")
+            )
+            .route(r -> r.order(-1)
+                .host("**.throttle.org").and().path("/get")
+                .filters(f -> f.filter(throttle.apply(1,
+                        1,
+                        10,
+                        TimeUnit.SECONDS)))
+                .uri("http://httpbin.org:80")
+            )
+            .build();
+}
+```
+ 
+这种方式也允许更多自定义的“判断”。各个从RouteDefinitionLocator 生成的“判断”之间可以通过 逻辑and关联起来。使用流畅JAVA API你可以在“判断”中使用and(),or(),negate()方法。
+
+### 发现客户端路由定义探测器
+
+网关可以被配置成创建这样的路由:这些创建的这些路由需要基于某一种服务。而这种服务是在DiscoveryClient注册器中注册的。
+
+为了使用上面的路由需要设置:spring.cloud.gateway.discovery.locator.enabled=true。并且确保DiscoveryClient实例在classpath上并且是可用的。
+
+#### 为DiscoveryClient Routes配置“判断”和过滤器
+
+默认情况下，网关中为了路由而创建的单例"判断“和过滤器是通过DiscoveryClient创建的。
+
+默认的”predicate“是一个“路径判断“(之前介绍的Path Predicate)，使用这种格式定义:/serviceId/**,这当中的ServiceId就是DiscoveryClient中的ServiceId。
+
+默认的过滤器是"重写路由过滤器”（之前介绍的Rewrite Path Filter）。这个过滤器有一个这个则表达式"/serviceId/(?<remaining>.*)",一个"/${remaining}"参数.这样就正好在请求downstream之前把ServiceId从路径中剥离出来了。
+
+如果你想用DiscoveryClient自定义”判断“和路由器，你可以设置spring.cloud.gateway.discovery.locator.predicates[x]和spring.cloud.gateway.discovery.locator.filters[y]参数。但是你需要确保包含了上面的两个默认的。下面是响应application.properties的配置:
+
+spring.cloud.gateway.discovery.locator.predicates[0].name: Path
+spring.cloud.gateway.discovery.locator.predicates[0].args[pattern]: "'/'+serviceId+'/**'"
+spring.cloud.gateway.discovery.locator.predicates[1].name: Host
+spring.cloud.gateway.discovery.locator.predicates[1].args[pattern]: "'**.foo.com'"
+spring.cloud.gateway.discovery.locator.filters[0].name: Hystrix
+spring.cloud.gateway.discovery.locator.filters[0].args[name]: serviceId
+spring.cloud.gateway.discovery.locator.filters[1].name: RewritePath
+spring.cloud.gateway.discovery.locator.filters[1].args[regexp]: "'/' + serviceId + '/(?<remaining>.*)'"
+spring.cloud.gateway.discovery.locator.filters[1].args[replacement]: "'/${remaining}'"
+
+## 响应式Netty权限日志
+
+为了允许响应式Netty权限日志,设置-Dreactor.netty.http.server.accessLogEnabled=true(这必须是JAVA系统属性，而不是spring boot属性).日志系统(如:log4j)可以配置成生成单独的权限日志来记录Netty。logback.xml如下所示:
+
+```
+<appender name="accessLog" class="ch.qos.logback.core.FileAppender">
+        <file>access_log.log</file>
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="accessLog" />
+    </appender>
+
+    <logger name="reactor.netty.http.server.AccessLog" level="INFO" additivity="false">
+        <appender-ref ref="async"/>
+    </logger>
+```
+## 跨域请求配置
+
+网关可以控制跨域行为。这里所说的”全局跨域配置“是为Spring Framework CorsConfiguration配置的包含URL的map。下面的例子中。网管将会允许所有的GET请求路径。
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "https://docs.spring.io"
+            allowedMethods:
+            - GET
+            
+## 驱动器API
+
+”/gateway“驱动器节点允许其他节点模拟以及 和网关应用程序交互。但是交互需要获取远端权限。因此endpoint必须是可用的。并且应该被暴露在HTTP和JMX中。
+
+management.endpoint.gateway.enabled=true # default value
+management.endpoints.web.exposure.include=gateway   
+
+### 找回路由过滤器。
+
+#### 全局过滤器
+这是一个全局过滤器。要检索所有的全局路由器。你可以发送 GET请求到/actuator/gateway/globalfilters。就会得到如下所示的结果：
+
+```
+{
+  "org.springframework.cloud.gateway.filter.LoadBalancerClientFilter@77856cc5": 10100,
+  "org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter@4f6fd101": 10000,
+  "org.springframework.cloud.gateway.filter.NettyWriteResponseFilter@32d22650": -1,
+  "org.springframework.cloud.gateway.filter.ForwardRoutingFilter@106459d9": 2147483647,
+  "org.springframework.cloud.gateway.filter.NettyRoutingFilter@1fbd5e0": 2147483647,
+  "org.springframework.cloud.gateway.filter.ForwardPathFilter@33a71d23": 0,
+  "org.springframework.cloud.gateway.filter.AdaptCachedBodyGlobalFilter@135064ea": 2147483637,
+  "org.springframework.cloud.gateway.filter.WebsocketRoutingFilter@23c05889": 2147483646
+}
+```
+响应包含了各个位置上全局路由器的细节。每一个路由器都是实例。并且和过滤器链路中的顺序是一样的。
+          
+#### 路由过滤器
+
+这个就是前面经常提到的Route Filter（路径过滤器）。要检索所有的网关过滤器工厂。发送GET请求到 /actuator/gateway/routefilters中。得到的结果如下所示:
+
+```
+{
+  "[AddRequestHeaderGatewayFilterFactory@570ed9c configClass = AbstractNameValueGatewayFilterFactory.NameValueConfig]": null,
+  "[SecureHeadersGatewayFilterFactory@fceab5d configClass = Object]": null,
+  "[SaveSessionGatewayFilterFactory@4449b273 configClass = Object]": null
+}  
+```
+
+同样的，包含了很多工厂的细节。请注意每一个都有null,是因为controller还没有实例化。
+
+### 刷新路由缓存
+
+要清楚路由缓存,发送POST请求到/actuator/gateway/refresh就可以了。它会返回一个没有body的200。
+
+### 检索网关中的路由
+
+发送GET请求到/actuator/gateway/refresh中。得到个结果如下:
+
+```
+[{
+  "route_id": "first_route",
+  "route_object": {
+    "predicate": "org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory$$Lambda$432/1736826640@1e9d7e7d",
+    "filters": [
+      "OrderedGatewayFilter{delegate=org.springframework.cloud.gateway.filter.factory.PreserveHostHeaderGatewayFilterFactory$$Lambda$436/674480275@6631ef72, order=0}"
+    ]
+  },
+  "order": 0
+},
+{
+  "route_id": "second_route",
+  "route_object": {
+    "predicate": "org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory$$Lambda$432/1736826640@cd8d298",
+    "filters": []
+  },
+  "order": 0
+}]
+```
+
+同样的，包含了实例，下面的列表反应出上面返回的解释。
+
+> 路径                                                                                                    类型                                                                                                                  描述
+
+> route_id                                  String                                         the route id.
+
+> route_object.predicate                    Object                                       the route predicate
+
+> route_object.filters                       Array                            the gatewayFilter factories applied to the route.
+
+> order                                     Number                                         the route order
+
+### 检索某一个路由的信息
+
+可以发送GET请求到/actuator/gateway/routes/{id} (e.g., /actuator/gateway/routes/first_route)中。
+
+```
+{
+  "id": "first_route",
+  "predicates": [{
+    "name": "Path",
+    "args": {"_genkey_0":"/first"}
+  }],
+  "filters": [],
+  "uri": "https://www.uri-destination.org",
+  "order": 0
+}]
+```
+
+下面的表格说明了上面的结构
+
+> 路径                                                                                                    类型                                                                                                                  描述
+
+> id                                        String                                        the route id
+
+> predicates                                Array                                ”判断“的集合，每一个都有自己的名字和自己的参数
+
+> filters                                   Array                                部署在路由上的过滤器集合
+
+> uri                                       String                                    路由的终点
+
+> order                                     Number                                      路由顺序.
+
+### 创建和删除路由
+
+创建一个路由，发送POST请求到/gateway/routes/{id_route_to_create}，请求中的JSON对象需要包含这个路由需要的属性。
+删除一个路由，发送DELETE请求到/gateway/routes/{id_route_to_delete}。
+
+### endpoint列表
+
+ 下面的表格总结了网关所有的endpoint。请注意每一个endpoint都有一个/actuator/gateway基础路径。
+ 
+ 
+> ID	                    HTTP Method	                          Description
+
+>globalfilters                  GET                    显示部署在路由上的全局过滤器集合
+
+>routefilters                   GET                显示部署到某一个特殊路由的网关过滤器工厂集合
+
+>refresh                        POST                清除缓存
+
+>routes                         GET                显示定义在网关上的所有路由
+
+>routes/{id}                    GET                显示某一个路由
+
+>routes/{id}                    POST               添加一个新的路由到网关中
+
+>routes/{id}                    DELETE             删除一个路由
+
+## 开发者指南
+
+回顾一下我们写的自定义集合.
+
+### 写自定义路由”判断“工厂
+
+见上面的”判断“工厂
+
+### 写自定义网关过滤器工厂
+
+要创建一个过滤器，你需要实现一个GatewayFilterFactory接口。还要继承AbstractGatewayFilterFactory 抽象类。下面是实例:
+
+PreGatewayFilterFactory.java
+```
+public class PreGatewayFilterFactory extends AbstractGatewayFilterFactory<PreGatewayFilterFactory.Config> {
+
+	public PreGatewayFilterFactory() {
+		super(Config.class);
+	}
+
+	@Override
+	public GatewayFilter apply(Config config) {
+		// grab configuration from Config object
+		return (exchange, chain) -> {
+            //If you want to build a "pre" filter you need to manipulate the
+            //request before calling chain.filter
+            ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
+            //use builder to manipulate the request
+            return chain.filter(exchange.mutate().request(request).build());
+		};
+	}
+
+	public static class Config {
+        //Put the configuration properties for your filter here
+	}
+
+}
+```
+
+PostGatewayFilterFactory.java
+
+```
+public class PostGatewayFilterFactory extends AbstractGatewayFilterFactory<PostGatewayFilterFactory.Config> {
+
+	public PostGatewayFilterFactory() {
+		super(Config.class);
+	}
+
+	@Override
+	public GatewayFilter apply(Config config) {
+		// grab configuration from Config object
+		return (exchange, chain) -> {
+			return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+				ServerHttpResponse response = exchange.getResponse();
+				//Manipulate the response in some way
+			}));
+		};
+	}
+
+	public static class Config {
+        //Put the configuration properties for your filter here
+	}
+
+}
+```
+
+### 写自定义全局过滤器
+
+为了编写自定义全局过滤器，你需要实现GlobalFilter 接口。下面是代码例子：
+
+```
+@Bean
+public GlobalFilter customGlobalFilter() {
+    return (exchange, chain) -> exchange.getPrincipal()
+        .map(Principal::getName)
+        .defaultIfEmpty("Default User")
+        .map(userName -> {
+          //adds header to proxied request
+          exchange.getRequest().mutate().header("CUSTOM-REQUEST-HEADER", userName).build();
+          return exchange;
+        })
+        .flatMap(chain::filter);
+}
+
+@Bean
+public GlobalFilter customGlobalPostFilter() {
+    return (exchange, chain) -> chain.filter(exchange)
+        .then(Mono.just(exchange))
+        .map(serverWebExchange -> {
+          //adds header to response
+          serverWebExchange.getResponse().getHeaders().set("CUSTOM-RESPONSE-HEADER",
+              HttpStatus.OK.equals(serverWebExchange.getResponse().getStatusCode()) ? "It worked": "It did not work");
+          return serverWebExchange;
+        })
+        .then();
+}
+```
+
+### 写自定义路由定位器和编写人
+
+见上面的路由定位器
+
+## 使用springmvc做一个简单的网关
+
+spring cloud 网关提供了一个通用的对象ProxyExchange。你可以把它作为一个方法参数用到普通的spring web handler里面。它支持基础的downstream HTTP exchange。它同样也支持MVC forward()方法.要使用这个对象ProxyExchange ,需要引用spring-cloud-gateway-mvc。下面是代码示例:
+
+```
+@RestController
+@SpringBootApplication
+public class GatewaySampleApplication {
+
+	@Value("${remote.home}")
+	private URI home;
+
+	@GetMapping("/test")
+	public ResponseEntity<?> proxy(ProxyExchange<byte[]> proxy) throws Exception {
+		return proxy.uri(home.toString() + "/image/png").get();
+	}
+
+}
+```
+
+使用webflux也是一样的
+
+```
+@RestController
+@SpringBootApplication
+public class GatewaySampleApplication {
+
+	@Value("${remote.home}")
+	private URI home;
+
+	@GetMapping("/test")
+	public Mono<ResponseEntity<?>> proxy(ProxyExchange<byte[]> proxy) throws Exception {
+		return proxy.uri(home.toString() + "/image/png").get();
+	}
+
+}
+```
+
+ProxyExchange可以使用那些很方便的方法，让handler method能够发现和加强即将到来的请求URI。比如你想摘取路径中的最后一个元素，你可以使用下面的示例:
+
+```
+@GetMapping("/proxy/path/**")
+public ResponseEntity<?> proxyPath(ProxyExchange<byte[]> proxy) throws Exception {
+  String path = proxy.path("/proxy/path/");
+  return proxy.uri(home.toString() + "/foos/" + path).get();
+}
+```
+
+Spring MVC或者 Webflux有的所有功能在网关handler method上同样可以使用。所以你可以注入请求头或者查询某些参数，你也可以使用header()方法来向response添加头部文件，
+你也可以通过向get()方法添加匹配器的方式来自定义响应头。
+
