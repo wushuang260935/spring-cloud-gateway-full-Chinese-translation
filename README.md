@@ -18,7 +18,7 @@ spring cloud gateway的目标是提供一个简单的,高效的方式。这个�
 ## 相关术语解释
 
 路由(Route)：
-    路由是gateway的基本模块。它由一个ID，一个请求URI，一个判断集(collection of predicates),一个过滤集(collection of filters).
+    路由是gateway的基本模块。它由一个ID，一个请求URI，一个判断集(collection of predicates),一个过滤器集(collection of filters).
 如果判断集都返回true。那么这个路由就会请求成功。
 
 判断(predicate)：
@@ -44,6 +44,7 @@ spring cloud gateway的目标是提供一个简单的,高效的方式。这个�
 
 后置路由判断工厂只需要一个日期时间类型的参数。这个工厂生成的“判断”可以匹配那些发生在日期时间参数之后的请求。如下方在application.yml中配置所示:这个“判断”可以匹配任何“请求时间”晚于2017年1月20号17点42分47秒的请求。
 
+```
 spring:
   cloud:
     gateway:
@@ -52,13 +53,13 @@ spring:
         uri: https://example.org
         predicates:
         - After=2017-01-20T17:42:47.789-07:00[America/Denver]
-
+```
 
 ### 区间路由判断工厂
 
 和上一个类似，区间路由判断工厂也需要两个日期时间类型参数。左边的参数必须小于右边的参数。这个工厂生成的“判断”可以匹配任何请求时间介于这两个参数之间的请求。application.yml配置如下方所示:
 
-
+```
 spring:
   cloud:
     gateway:
@@ -67,10 +68,13 @@ spring:
         uri: https://example.org
         predicates:
         - Between=2017-01-20T17:42:47.789-07:00[America/Denver], 2017-01-21T17:42:47.789-07:00[America/Denver]
+```
         
 ### 前置路由判断工厂
 
 前置路由判断工厂也只需要一个日期时间类型参数,同样的，“判断”可以匹配任何请求时间发生在参数之前的请求。application.yml如下所示:
+
+```
 spring:
   cloud:
     gateway:
@@ -79,11 +83,13 @@ spring:
         uri: https://example.org
         predicates:
         - Before=2017-01-20T17:42:47.789-07:00[America/Denver]
+```
         
 ### cookie路由判断工厂
         
 这个工厂需要两个参数，一个是cookie名称，另一个是正则表达式.也就是说，这个工厂生成的“判断”可以匹配到含有以下cookie的请求:cookie中的name=第一个参数,cookie中的value通过第二个参数的验证。application.yml如下所示:只要请求中的cookie的name=chocolate并且cookie的value能通过正则表达式"ch.p"验证.那么这个请求就会被匹配到。
 
+```
 spring:
   cloud:
     gateway:
@@ -92,12 +98,14 @@ spring:
         uri: https://example.org
         predicates:
         - Cookie=chocolate, ch.p
+```
         
 ### 头部路由判断工厂
 
 和上一个路由工厂类似，头部路由判断工厂也需要两个参数.一个头部属性和一个正则表达式，也就是说，如果一个请求中header有一个属性=第一个参数,并且这个属性的值能够通过第二个参数的验证，那么这个请求就会被匹配到。application.yml如下所示:
 请求的header中包含X-Request-Id属性，并且这个属性的值能通过"\d+"的验证，那么这个请求就会被匹配到.
 
+```
 spring:
   cloud:
     gateway:
@@ -106,11 +114,13 @@ spring:
         uri: https://example.org
         predicates:
         - Header=X-Request-Id, \d+
+```
         
 ### Host(主机)路由判断工厂
 
 主机路由判断工厂需要一个参数:一连串uri，uri之间用逗号隔开,uri必须有.号和后缀,同理,如果请求中的uri和参数中的任一个域名相同，这个请求就会被匹配到,application.yml如下所示:需要注意的是:www.somehost.org.sub.somehost.org,mmi.somehost.org都匹配**.somehost.org.另外注意需要注意的是:"判断"也支持uri中存在变量路径.比如:{type}.somehost.org。还需要注意:"host路由判断"会把“变量路径”和"变量值"放到一个map中。“变量路径”作为key.“变量值”作为value。如:map.put("type","login")。并且，为了方便后面的gatewayFilter factories(网关过滤器工厂)使用这个map.它还会把这个map作为value，ServerWebExchangeUtils.URI_TEMPLATE_VARIABLES_ATTRIBUTE作为key.放到ServerWebExchange.getAttributes()中.
 
+```
 spring:
   cloud:
     gateway:
@@ -119,11 +129,13 @@ spring:
         uri: https://example.org
         predicates:
         - Host=**.somehost.org,**.anotherhost.org,{type}.somehost.org
+```
 
 ### 方式路由判断工厂
 
 方式路由判断工厂需要一个参数:http请求方式.application.yml如下所示:
 
+```
 spring:
   cloud:
     gateway:
@@ -132,11 +144,13 @@ spring:
         uri: https://example.org
         predicates:
         - Method=GET
+```
      
 ### 子路径路由判断工厂
 
 子路径路由判断工厂需要两个参数:一连串Spring Pathmathcer类型的子路径，以及一个选填参数:matchOptionalTrailingSeparator(。。。。分隔符)
 
+```
 spring:
   cloud:
     gateway:
@@ -145,6 +159,7 @@ spring:
         uri: https://example.org
         predicates:
         - Path=/foo/{segment},/bar/{segment}
+```
         
 和Host路由工厂完全一样，如果有变量路径就会放到map里面，以上就不再赘述了。
 
@@ -152,6 +167,7 @@ spring:
 
 查询路由判断工厂需要两个参数:一个param和一个可选的正则表达式."判断”会匹配到请求的参数名等于param并且请求参数值能通过正则表达式验证的请求。
 
+```
 spring:
   cloud:
     gateway:
@@ -160,11 +176,13 @@ spring:
         uri: https://example.org
         predicates:
         - Query=foo,ba./d
+```
         
 ### 远程地址路由判断工厂
 
 这个工厂需要一个list(长度不能小于1).list放入ipv4或者ipv6地址串,application.yml如下所示:
 
+```
 spring:
   cloud:
     gateway:
@@ -173,6 +191,7 @@ spring:
         uri: https://example.org
         predicates:
         - RemoteAddr=192.168.1.1
+```
         
 ### 修改远程地址的解析方式
 
@@ -205,6 +224,7 @@ maxTrustedIndex的参数值                                        解析结果
 
 这个工厂需要两个参数:name和value.application.yml如下所示:这个过滤器将会添加属性名称为X-Request-Foo,属性值为Bar到请求头中.
 
+```
 spring:
   cloud:
     gateway:
@@ -213,6 +233,7 @@ spring:
         uri: https://example.org
         filters:
         - AddRequestHeader=X-Request-Foo, Bar
+```
         
 ### 添加请求参数网关过滤器工厂
 
@@ -222,6 +243,7 @@ spring:
 
 这个工厂需要两个参数:name和value.application.yml如下所示:这个过滤器将会添加属性名称为X-Response-Foo,属性值为Bar到返回头中.
 
+```
 spring:
   cloud:
     gateway:
@@ -230,11 +252,13 @@ spring:
         uri: https://example.org
         filters:
         - AddResponseHeader=X-Response-Foo, Bar
+```
         
 ### 消除重复响应头网关过滤器工厂
 
 这个工厂需要一个name参数。name参数可以是一连串响应头信息，响应头之间用空格隔开,这个工厂还需要一个可选的strategy参数。application.yml如下所示:有时候spring cloud gateway的CORS logic(跨域请求逻辑处理）和downstream(响应后逻辑处理）都会添加Access-Control-Allow-Credentials响应头和Access-Control-Allow-Origin响应头，这就会导致响应头属性重复。所以这个过滤器可以去掉指定的重复的部分。至于去掉的是哪一个重复的就可以看第二个参数(strategy)了。第二个参数实际只有3个值,RETAIN_FIRST(默认，表示只保留第一个),RETAIN_LAST(表示只保留最后一个),RETAIN_UNIQUE(表示只保留属性值不一样的那一个)
 
+```
 spring:
   cloud:
     gateway:
@@ -243,6 +267,7 @@ spring:
         uri: https://example.org
         filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin,RETAIN_UNIQUE
+```
 
 这个过滤器不只是处理上面例子中的跨域请求的重复问题。它其实可以处理所有响应头属性重复的问题。
         
@@ -260,6 +285,7 @@ spring:
 
 这个工厂只需要一个prefix参数,如下图所示:通过这个过滤器的所有请求hui加上prefix参数作为前缀，例如:/hello就会变成/mypath/hello
 
+```
 spring:
   cloud:
     gateway:
@@ -268,11 +294,13 @@ spring:
         uri: https://example.org
         filters:
         - PrefixPath=/mypath
+```
      
 ### 保留主机头网关过滤器工厂
 
 这个工厂不需要参数,当收到请求后，保留主机头网关过滤器会设置一个request attribute(请求属性).这个属性会告诉路由过滤器尽量发送原始host header，而不是由http客户端的host header.
 
+```
 spring:
   cloud:
     gateway:
@@ -281,6 +309,7 @@ spring:
         uri: https://example.org
         filters:
         - PreserveHostHeader
+```
         
 ### 请求频率限制器过滤器工厂
 
@@ -295,6 +324,7 @@ spring:
 
 这个工厂需要一个status和一个url参数。status限定填写http 300系列,url限定填写合法url.application.yml如下所示:
 
+```
 spring:
   cloud:
     gateway:
@@ -303,6 +333,7 @@ spring:
         uri: https://example.org
         filters:
         - RedirectTo=302, https://acme.org
+```
         
 ### 通过hop头过滤器移除hop网关过滤器工厂
 
@@ -330,6 +361,7 @@ Upgrade
 
 这个工厂需要name参数,他是即将被移除的header属性名.application.yml如下所示:需要注意的是，移除操作是在downstream(响应后逻辑处理)之前
 
+```
 spring:
   cloud:
     gateway:
@@ -338,6 +370,7 @@ spring:
         uri: https://example.org
         filters:
         - RemoveRequestHeader=X-Request-Foo
+```
 
 ### 移除响应头网关过滤器工厂
 
@@ -347,6 +380,7 @@ spring:
 
 这个工厂需要一个正则表达式参数和一个replacement参数.使用java正则表达式筛选出需要被重写的路径:application.yml如下所示:对于这个/foo/bar请求。过滤器将会把这个url变成/bar。然后再去downstream(响应后逻辑处理).注意这个$\属性，yaml格式的转义字符也是\.所以他是为了$字符串
 
+```
 spring:
   cloud:
     gateway:
@@ -357,6 +391,7 @@ spring:
         - Path=/foo/**
         filters:
         - RewritePath=/foo/(?<segment>.*), /$\{segment}
+```
 
 ### 重写响应头网关过滤器工厂
 
@@ -366,6 +401,7 @@ spring:
 
 在进行downstream之前，这个工厂会强制做session.save()操作.当使用spring session的时候会非常有用。特别是在做转发请求之前，需要保证session状态已经被保存的时候。还有就是，有懒数据加载的时候。
 
+```
 spring:
   cloud:
     gateway:
@@ -376,6 +412,7 @@ spring:
         - Path=/foo/**
         filters:
         - SaveSession
+```
         
 如果你想整合spring session到spring security中。在某些细节处理上，这个过滤器就很重要了。
 
@@ -405,6 +442,7 @@ X-Permitted-Cross-Domain-Policies:none
 
 这个工厂需要一个路径template参数.这个模板提供一种简单地修改请求路径的方式:允许模板分隔符。有了模板分隔符，那么不需要修改的地方，就可以使用模板分隔符表示，而某些确定的地方就被修改了。application.yml如下所示:如果uri是：/foo/bar，/foo/scde,/foo/wer，那么久会被修改成,bar,/scde,/wer
 
+```
 spring:
   cloud:
     gateway:
@@ -415,11 +453,13 @@ spring:
         - Path=/foo/{segment}
         filters:
         - SetPath=/{segment}
+```
         
 ### 设置响应头网关过滤器工厂
 
 这个工厂需要name参数和value参数。他会把新的name:value替换旧的name:value。application.yml如下所示:加入原来的X-Response-Foo:1234,那么就会替换为X-Response-Foo:Bar
 
+```
 spring:
   cloud:
     gateway:
@@ -428,11 +468,13 @@ spring:
         uri: https://example.org
         filters:
         - SetResponseHeader=X-Response-Foo, Bar
+```
         
 ### 设置状态网关过滤器工厂
 
 这个工厂需要一个status参数，它是一个Spring的HttpStatus。默认是404或者枚举类型NOT_FOUND.使用这个过滤器，所有的请求响应状态都会设置成status.application.yml如下所示:所有的响应都是401
 
+```
 spring:
   cloud:
     gateway:
@@ -445,11 +487,13 @@ spring:
         uri: https://example.org
         filters:
         - SetStatus=401
+```
         
 ### 剥离前缀网关过滤器工厂
 
 这个工厂需要一个parts参数，他是一个数字，路径的第几个部分会被剥离。这个操作发生在请求downstream之前。application.yml如下所示：从左到右下标为2的路径bar将会被去掉。运来的路径:https://nameservice/name/bar/foo,过滤器操作过后的路径:https://nameservice/name/foo.
 
+```
 spring:
   cloud:
     gateway:
@@ -460,6 +504,7 @@ spring:
         - Path=/name/**
         filters:
         - StripPrefix=2        
+```
 
 ### 重试网关过滤器工厂
 
@@ -473,6 +518,12 @@ spring:
 
 >series:org.springframework.http.HttpStatus.Series
 
+            
+>这个过滤器并不支持有body的请求。
+
+>使用这个过滤器的时候，如果某个请求是转发请求，请注意这个请求的返回类型。
+
+```
 spring:
   cloud:
     gateway:
@@ -486,15 +537,13 @@ spring:
           args:
             retries: 3
             statuses: BAD_GATEWAY
-            
->这个过滤器并不支持有body的请求。
-
->使用这个过滤器的时候，如果某个请求是转发请求，请注意这个请求的返回类型。
+```
 
 ### 请求大小网关过滤器工厂
 
 这个工厂需要一个RequestSize参数(可选的,没设置默认是5M）。当请求大小超过设置的阈值的时候。这个工厂的过滤器能够限制请求到达downstream服务。
 
+```
 spring:
   cloud:
     gateway:
@@ -507,6 +556,7 @@ spring:
       - name: RequestSize
         args:
           maxSize: 5000000
+```
           
 如果请求大小超过阈值，那么过滤器就会设置header的errorMessage:413 Payload Too Large.    
 
@@ -568,12 +618,14 @@ public RouteLocator routes(RouteLocatorBuilder builder) {
 
 如果你想添加到适用于所有路由的过滤器，你可以使用spring.cloud.gateway.default-filters属性，这个属性需要一定数量的过滤器.application.yml如下所示:
 
+```
 spring:
   cloud:
     gateway:
       default-filters:
       - AddResponseHeader=X-Response-Default-Foo, Default-Bar
       - PrefixPath=/httpbin
+```
       
 ## 全局过滤器
 
@@ -634,6 +686,7 @@ public GlobalFilter c() {
 
 这个过滤器除了在ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR中找寻uri之外，还会在ServerWebExchangeUtils.GATEWAY_SCHEME_PREFIX_ATTR中找lb的uri。
 
+```
 spring:
   cloud:
     gateway:
@@ -642,6 +695,7 @@ spring:
         uri: lb://service
         predicates:
         - Path=/service/**
+```
 
 > 默认情况下， 过滤器如果在负载均衡器中没找某一个服务实例。那么会返回503.但是如果你想返回404.可以设置spring.cloud.gateway.loadbalancer.use404=true
 
@@ -663,6 +717,7 @@ spring:
 
 如果ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR属性中有ws或者wss策略的话，这个过滤器就会运行。这个过滤器使用Spring Web Socket转发请求 
 
+```
 spring:
   cloud:
     gateway:
@@ -677,6 +732,7 @@ spring:
         uri: ws://localhost:3001
         predicates:
         - Path=/websocket/**
+```
         
 ### 网关度量过滤器
 
@@ -696,6 +752,7 @@ spring:
 
 网关可以监听https请求，但请求必须这样配置才能被监听到:
 
+```
 server:
   ssl:
     enabled: true
@@ -703,18 +760,22 @@ server:
     key-store-password: scg1234
     key-store: classpath:scg-keystore.p12
     key-store-type: PKCS12
+```
     
 如果网关中有后管的请求，那么可以做一下设置，让网关信任所有的请求。
 
+```
 spring:
   cloud:
     gateway:
       httpclient:
         ssl:
           useInsecureTrustManager: true
+```
           
 生产环境中不能使用useInsecureTrustManager。因为网关上会配置一系列的可信任证书。
 
+```
 spring:
   cloud:
     gateway:
@@ -723,11 +784,13 @@ spring:
           trustedX509Certificates:
           - cert1.pem
           - cert2.pem
+```
           
 ### TLS握手
 
 网关保存了客户连接池。这些连接池是用来路由到后管的。当他们使用https通信的时候，TLS就会握手，而且握手有过期时间。过期时间的配置如下:
 
+```
 spring:
   cloud:
     gateway:
@@ -736,11 +799,13 @@ spring:
           handshake-timeout-millis: 10000
           close-notify-flush-timeout-millis: 3000
           close-notify-read-timeout-millis: 0
+```
           
 ## 配置
 
 spring cloud 网关的配置是一群RouteDefinitionLocator的集合。默认情况下，PropertiesRouteDefinitionLocator 使用spring boot的@ConfigurationProperties机制加载属性。application.yml如下所示:
 
+```
 spring:
   cloud:
     gateway:
@@ -755,6 +820,7 @@ spring:
         uri: https://example.org
         filters:
         - SetStatus=401
+```
         
 某些情况下，使用配置文件就够了，但是生产环境的某些情况下使用额外的资源配置会更好,比如数据库.RouteDefinitionLocator被用来加载Redis,MongoDB,等的属性配置。
 
@@ -807,6 +873,7 @@ public RouteLocator customRouteLocator(RouteLocatorBuilder builder, ThrottleGate
 
 如果你想用DiscoveryClient自定义”判断“和路由器，你可以设置spring.cloud.gateway.discovery.locator.predicates[x]和spring.cloud.gateway.discovery.locator.filters[y]参数。但是你需要确保包含了上面的两个默认的。下面是响应application.properties的配置:
 
+```
 spring.cloud.gateway.discovery.locator.predicates[0].name: Path
 spring.cloud.gateway.discovery.locator.predicates[0].args[pattern]: "'/'+serviceId+'/**'"
 spring.cloud.gateway.discovery.locator.predicates[1].name: Host
@@ -816,6 +883,8 @@ spring.cloud.gateway.discovery.locator.filters[0].args[name]: serviceId
 spring.cloud.gateway.discovery.locator.filters[1].name: RewritePath
 spring.cloud.gateway.discovery.locator.filters[1].args[regexp]: "'/' + serviceId + '/(?<remaining>.*)'"
 spring.cloud.gateway.discovery.locator.filters[1].args[replacement]: "'/${remaining}'"
+```
+
 
 ## 响应式Netty权限日志
 
@@ -840,6 +909,7 @@ spring.cloud.gateway.discovery.locator.filters[1].args[replacement]: "'/${remain
 
 网关可以控制跨域行为。这里所说的”全局跨域配置“是为Spring Framework CorsConfiguration配置的包含URL的map。下面的例子中。网管将会允许所有的GET请求路径。
 
+```
 spring:
   cloud:
     gateway:
@@ -849,6 +919,7 @@ spring:
             allowedOrigins: "https://docs.spring.io"
             allowedMethods:
             - GET
+```
             
 ## 驱动器API
 
@@ -1001,6 +1072,7 @@ management.endpoints.web.exposure.include=gateway
 要创建一个过滤器，你需要实现一个GatewayFilterFactory接口。还要继承AbstractGatewayFilterFactory 抽象类。下面是实例:
 
 PreGatewayFilterFactory.java
+
 ```
 public class PreGatewayFilterFactory extends AbstractGatewayFilterFactory<PreGatewayFilterFactory.Config> {
 
